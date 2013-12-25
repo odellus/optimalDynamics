@@ -303,6 +303,9 @@ def cvLearningCurve():
         nPrune=11
         )
     data.pca()
+    pl.plot(1.-data.S**2/sum(data.S**2))
+    pl.show()
+
     data.fit_reduced(3,3,0.0)
     y = np.zeros(data.V[:data.nModes,:].shape)
     y[:,0] = data.V[:data.nModes,0]
@@ -316,7 +319,7 @@ def cvLearningCurve():
     pl.axis(hold=True)
     pl.plot(data.V[:data.nModes,:].T)
     pl.show()
-    lams = [0.0, 0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1., 3., 10.]
+    lams = np.linspace(0.,1.,20)
     errCV = []
     errTrain = []
     for lam in lams:
@@ -346,7 +349,7 @@ def cvLearningCurve():
 
     learnCurveCV = []
     learnCurveTrain = []
-    mRange = range(data.X.shape[1]-2)
+    mRange = range(data.X.shape[1]-(2+data.nPrune))
     for k in mRange:
         data.fit_reduced(3,1, optLam,nSamples=k+2)
         trainErr = data.regCostFunction(
