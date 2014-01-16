@@ -4,7 +4,7 @@ import numpy as np
 import pylab as pl
 
 from scipy import optimize as opt
-
+np.random.seed(seed=5629387459236459872)
 
 def load_yeast2_data( fname ):
     """
@@ -168,6 +168,13 @@ class dataDynamics:
 
     def SVD(self):
         """
+        Method: SVD(self)
+                     
+        Description: performs spectral decomposition of the normalized
+        features from the time series data via the SVD.
+                                          
+        Parameters:  passed through from __init__
+                                                                        
         """
         tS = self.tSeries[:,:-(self.nCV+self.nTest)]
         u, s, v = np.linalg.svd(tS)
@@ -215,11 +222,6 @@ class dataDynamics:
                      lam -- regularization parameter
 
         """
-        # nModes is pulled out from the class.
-        # "This is the beauty of OOP. I can pull variables in
-        #  from the class when I know a method is only going
-        #  to be called by another method that assigns 
-        #  self.nModes with the correct value." -- observation
         nModes =self.nModes
         Theta = theta.reshape((nModes,nModes))
         if self.method == 'pca':
@@ -283,7 +285,6 @@ class dataDynamics:
         Vx = self.Vtrain[:,:-1]
         Vy = self.Vtrain[:,1:]
         if self.scrambleFlag== False:
-            #print "scrambling"
             # Scramble the sample features and targets together.
             randV = np.random.permutation(
                 np.concatenate((Vx,Vy),axis=0).T
@@ -292,7 +293,6 @@ class dataDynamics:
             self.Vy = randV[nModes:,:]
             self.scrambleFlag == True
         else:
-            #print "pre-scrambled"
             self.Vx = Vx
             self.Vy = Vy
 
@@ -324,7 +324,7 @@ class dataDynamics:
         self.method = method
         # If we don't use the nSamples variable, we use the 
         # maximum number of examples in the training set and    
-        # get rid of the first nPrune samples.                                                               
+        # get rid of the first nPrune samples.                              
         if nSamples==None:
             self.nSamples = self.X.shape[1]-self.nPrune+1
             self.scrambleFlag = False
@@ -413,6 +413,20 @@ class dataDynamics:
                      Theta, 
                      train,
                      lam):
+        """
+        Method: LINSYSCOSTFUNCTION(self, Theta, train, lam)
+
+        Descripton: Returns the error between a linear dynamical
+                    system with Jacobian Matrix Theta and a data set
+                    for training, train.
+
+        Parameters: self -- oop
+                    Theta -- the Jacobian of the linear dynamical 
+                             system
+                    train -- the data we are looking to fit Theta to.
+                    lam -- regularization lambda
+                   
+        """
         x0=train[:,0]
         mRange=range(train.shape[1])
         A = Theta.reshape((train.shape[0],train.shape[0]))
@@ -482,10 +496,17 @@ class dataDynamics:
         self.optimalTheta = optimalTheta
 
 def booneValidation(genes, trans_mat, saver=None):
-    """Create a smaller interaction matrix from the data published
-    along with the 'Genetic Landscape of a Cell' article from
-    Science."""
+    """
+    Function: BOONEVALIDATION(genes,trans_mat)
 
+    Description: Create a smaller interaction matrix from the data
+                 published along with the 'Genetic Landscape of a
+                 Cell' article from Science.
+
+    Parameters: genes -- a list of genes in S. cerevisiae
+                trans_mat -- a transition matrix which predicts dynamics.
+
+    """
     # read in the Boone lab's data
     fh = open('data/test/sgadata_costanzo2009_rawdata_matrix_101120.txt','r')
     data = fh.read().split('\n')[:-1]
@@ -502,7 +523,6 @@ def booneValidation(genes, trans_mat, saver=None):
 
     landscape = np.array(landscape,dtype=np.float)
 
-    
     # The Open Reading Frames (ORFs) whose interactions are assayed
     # are the row names. No screening has been done yet.
     orf_rows = []
@@ -511,8 +531,6 @@ def booneValidation(genes, trans_mat, saver=None):
 
     # We want an ORF dictionary so we can map gene name to row number.
     N_orfs = len(orf_rows)
-    #print N_orfs
-
     orf_dict = {}
     for i in range(N_orfs):
         orf_dict[orf_rows[i]] = i
@@ -523,8 +541,6 @@ def booneValidation(genes, trans_mat, saver=None):
     # We want a dictionary so we can index the gene name to column number.
     assay_dict={}
     N_assay = len(assay_cols)
-    #print N_assay
-
     for i in range(N_assay):
         assay_dict[assay_cols[i]] = i
 
@@ -564,10 +580,6 @@ def booneValidation(genes, trans_mat, saver=None):
         skinnier[:,i] = shorter[:,assay_dict[screen_assay[i]]]
         trans_skinny[:,i] = trans_short[:,trans_dict[screen_assay[i]]]
 
-    #print "These are the shapes of the screened transition and landscape matrices"
-    #print trans_skinny.shape, skinnier.shape
-    #print "This is the shape of trans_mat..."
-    #print trans_mat.shape
     if saver != None:
         
         fh = open('screen_col_'+saver+'.pkl','w')
@@ -591,18 +603,40 @@ def booneValidation(genes, trans_mat, saver=None):
             if np.isnan(skinnier[i,ii]):
                 skinnier[i,ii] = 1e4
 
+    return [skinnier, trans_skinny]
 
-    
-    #correlation = np.corrcoef(skinnier.ravel(),1./trans_skinny.ravel())
+def char_fp(mat):
+    """
+    Function: CHAR_FP(mat)
 
-    #print( "The correlation between the functional and physical transcriptome topologies is %s." % correlation[0,1] )
+    Description: Characterizes the fixed point that a square matrix
+                 <mat> represents.
 
-    #transitionCutoff = np.abs(1./trans_skinny) < 0.05
-    #landscapeCutoff = np.abs(skinnier) < 0.05
+    Parameters: mat -- the jacobian matrix of the linear dynamical
+                       system
 
-
-    return [trans_skinny, skinnier]
-
+    """
+    nabla = np.linalg.det(mat)
+    tau = np.trace(mat)
+    tol = 10e-6
+    state = 'error'
+    if nabla < 0.0:
+        state = "saddle point"
+    elif tau == 0.0:
+        state = "non-isolated fixed point"
+    elif tau**2 > 4*nabla and tau > 0.0:
+        state = "unstable node"
+    elif tau**2 == 4*nabla:
+        state = "star, degenerate node"
+    elif tau**2 < 4*nabla and tau > 0.0:
+        state = "unstable spiral"
+    elif np.abs(nabla) < tol and nabla > 0.0:
+        state = "center"
+    elif tau**2 < 4*nabla and tau < 0.0:
+        state = "stable spiral"
+    elif tau**2 > 4*nabla and tau < 0.0:
+        state = "stable node"
+    return state
 
 
 def cvLearningCurve(nModes,method='pca'):
@@ -635,40 +669,14 @@ def cvLearningCurve(nModes,method='pca'):
         )
 
     ###!!!-------------------------------------------
-    # Start a list of values that are to be returned
+    # Start a list of values that is to be returned
     # when the function is called.
     ###!!!-------------------------------------------
     whatIwant = []
 
-    #pl.plot(1.-data.S**2/sum(data.S**2))
-    #pl.show()
-
-    # whatIwant.append(data.S)
     # A good bit of coupling between the modes works well.
     initEpsilon = 0.2
     # Do multivariate linear regression with l1 regularization
-    # data.fit_reduced(nModes,3,0.0,initEpsilon,method=method)
-    # Set up Initial Conditions and a place to store the
-    # dynamics of the discrete-time linear system.
-    #y = np.zeros(data.V[:data.nModes,:].shape)
-    #y[:,0] = data.V[:data.nModes,0]
-
-    ###!!!-------------------------------------------
-    # Return y and data.V instead of plotting inside
-    # the function.
-    ###!!!-------------------------------------------
-    #whatIwant.append(y)
-    #whatIwant.append(data.V)
-    # This happens after the cross-validation.
-
-    """
-    for k in range(data.nModes):
-        pl.subplot(data.nModes,1,k+1)
-        pl.plot(y[k,:].T)
-        pl.axis(hold=True)
-        pl.plot(data.V[k,:].T)
-    pl.show()
-    """
     lams = np.linspace(0.,1.0,20)
     errCV = []
     errTrain = []
@@ -684,48 +692,35 @@ def cvLearningCurve(nModes,method='pca'):
             data.Vx,
             data.Vy,
             0.0)
-        errCV.append((cvErr,lam))
+        errCV.append((cvErr,lam,data.optimalTheta))
         errTrain.append(trainErr)
 
     optLam = sorted(errCV)[0][1]
+    theta = sorted(errCV)[0][2]
 
-    y = np.zeros(data.V[:data.nModes,:].shape)                                                                                
-    y[:,0] = data.V[:data.nModes,0]
+    Vtest = np.zeros((data.Vxtest.shape[0],nTest+1))
+    Vtest[:,:-1] = data.Vxtest
+    Vtest[:,-1] = data.Vytest[:,-1]
 
-    for k in range(data.V.shape[1]-1):
+    y = np.zeros(Vtest.shape)                           
+    y[:,0] = Vtest[:,0]
+
+    for k in range(nTest-1):
         y[:,k+1] = np.dot(
-            data.optimalTheta.reshape(data.nModes,data.nModes),
+            theta.reshape((data.nModes,data.nModes)),
             y[:,k]
             )
-
-
     ###!!!-------------------------------------------
     # Return the optimal lambda, errCvPlot, errTrain,
     # and optimal theta parameters.
     ###!!!-------------------------------------------
-    whatIwant.append(data.optimalTheta)
+    whatIwant.append(theta)
     whatIwant.append(y)
     whatIwant.append(data.V)
     whatIwant.append(optLam)
     whatIwant.append(errTrain)
     whatIwant.append(errCV)
-    # whatIwant = [optimalTheta, y, v, optLam, errTrain, errCV]
     print "The Optimal Lambda was "+str(optLam)+"."
-    """
-    errCvPlot = []
-    
-    for x in errCV:
-        errCvPlot.append(x[0])
-    
-    pl.plot(lams,errCvPlot,'g')
-    pl.axis(hold=True)
-    pl.plot(lams,errTrain,'m')
-    pl.show()
-    """
-    ###!!!-------------------------------------------
-    # Return learnCurveCV and learnCurveTrain instead
-    # of plotting inside the function
-    ###!!!-------------------------------------------
     learnCurveCV = []
     learnCurveTrain = []
     mRange = range(data.X.shape[1]-(1+data.nPrune))
@@ -747,10 +742,7 @@ def cvLearningCurve(nModes,method='pca'):
     whatIwant.append(learnCurveTrain)
     whatIwant.append(data.S)
     whatIwant.append(lams)
-    # whatIwant = [optimalTheta, y, v, optLam, errTrain, errCV,
-    #              learnCurveCV, learnCurveTrain, S, lams]
 
-    data.transition_matrix()
     transMat = data.transitionMatrix
     whatIwant.append(transMat)
     whatIwant.append(data.U)
@@ -759,30 +751,27 @@ def cvLearningCurve(nModes,method='pca'):
     Vcv[:,:-1] = data.Vxcv
     Vcv[:,-1] = data.Vycv[:,-1]
 
-    Vtest = np.zeros((data.Vxtest.shape[0],nTest+1))
-    Vtest[:,:-1] = data.Vxtest
-    Vtest[:,-1] = data.Vytest[:,-1]
-
     whatIwant.append(Vcv)
     whatIwant.append(Vtest)
-    whatIwant.append(data.mu)
-    whatIwant.append(data.sigma)
-    whatIwant.append(data.tSeries)
 
+    if method=='pca':
+        whatIwant.append(data.mu)
+        whatIwant.append(data.sigma)
+    else:
+        whatIwant.append(np.zeros((len(data.geneLst),)))
+        whatIwant.append(np.ones((len(data.geneLst),)))
+
+    whatIwant.append(data.tSeries)
+    whatIwant.append(data.geneLst)
     x = whatIwant
     retDict = {'optimalTheta':x[0], 'y':x[1], 'v':x[2],
                'optLam':x[3], 'errTrain':x[4], 'errCV':x[5],
                'learnCurveCV':x[6], 'learnCurveTrain':x[7],
                's':x[8], 'lambdas':x[9],'transMat':x[10],
                'u':x[11], 'Vcv':x[12], 'Vtest':x[13], 
-               'mu':x[14], 'sigma':x[15], 'tSeries':x[16]}
+               'mu':x[14], 'sigma':x[15], 'tSeries':x[16],
+               'genes':x[17]}
     
-    """
-    pl.plot(mRange, learnCurveCV,'g')
-    pl.axis(hold=True)
-    pl.plot(mRange, learnCurveTrain,'m')
-    pl.show()
-    """
     return retDict
 
 def dynamicCvLearningCurve(nModes,method='pca'):
@@ -791,7 +780,7 @@ def dynamicCvLearningCurve(nModes,method='pca'):
     
     Description:   Uses the dataDynamics class to find an optimal  
                    transition matrix for the continuous approach        
-                   being utilized to find the transcriptome                                                                   
+                   being utilized to find the transcriptome                    
                    dynamics. The function that is used if the file is  
                    called directly instead of being imported as a 
                    module. Creates cross-validation plots and Learning 
@@ -811,38 +800,48 @@ def dynamicCvLearningCurve(nModes,method='pca'):
         nTest,
         nPrune=11
         )
-    ###!!!-------------------------------------------
-    # So return data.S instead of plotting inside the 
-    # function.
-    ###!!!-------------------------------------------
+
     whatIwant = []
     initEpsilon = 0.2
     lams = np.linspace(0.,1.0,20)
+    data.dynamic_fit_reduced(nModes,1, 0.0, initEpsilon,method=method)
+    Vcv = np.zeros((data.Vxcv.shape[0],nCV+1))
+    Vcv[:,:-1] = data.Vxcv
+    Vcv[:,-1] = data.Vycv[:,-1]
+
     errCV = []
     errTrain = []
     for lam in lams:
         data.dynamic_fit_reduced(nModes,1, lam, initEpsilon,method=method)
         cvErr = data.linSysCostFunction(
             data.optimalTheta,
-            data.Vtrain,
+            Vcv,
             0.0)
         trainErr = data.linSysCostFunction(
             data.optimalTheta,
             data.Vtrain,
             0.0)
-        errCV.append((cvErr,lam))
+        errCV.append((cvErr,lam,data.optimalTheta))
         errTrain.append(trainErr)
 
 
     optLam = sorted(errCV)[0][1]
+    print "The Optimal Lambda was "+str(optLam)+"."
 
-    theta = data.optimalTheta.reshape((nModes,nModes))
+    theta = sorted(errCV)[0][2]
     train = data.Vtrain
-    x0 = data.Vtrain[:,0]
-    y = data.linSys(x0,theta,range(data.Vtrain.shape[1]))
+
+    Vtest = np.zeros((data.Vxtest.shape[0],nTest+1))
+    Vtest[:,:-1] = data.Vxtest
+    Vtest[:,-1] = data.Vytest[:,-1]
+
+    x0 = Vtest[:,0]
+    y = data.linSys(x0,
+                    theta.reshape((nModes,nModes)),
+                    range(Vtest.shape[1]))
 
 
-    whatIwant.append(data.optimalTheta)
+    whatIwant.append(theta)
     whatIwant.append(y)
     whatIwant.append(data.Vtrain)
     whatIwant.append(optLam)
@@ -862,7 +861,7 @@ def dynamicCvLearningCurve(nModes,method='pca'):
                 0.0)
         cvErr = data.linSysCostFunction(
                 data.optimalTheta,
-                data.Vtrain[:,:nSamples],
+                Vcv,
                 0.0)
         learnCurveCV.append(cvErr)
         learnCurveTrain.append(trainErr)
@@ -874,136 +873,446 @@ def dynamicCvLearningCurve(nModes,method='pca'):
     whatIwant.append(lams)
     whatIwant.append(data.U)
 
-    Vcv = np.zeros((data.Vxcv.shape[0],nCV+1))
-    Vcv[:,:-1] = data.Vxcv
-    Vcv[:,-1] = data.Vycv[:,-1]
-
-    Vtest = np.zeros((data.Vxtest.shape[0],nTest+1))
-    Vtest[:,:-1] = data.Vxtest
-    Vtest[:,-1] = data.Vytest[:,-1]
-
     whatIwant.append(Vcv)
     whatIwant.append(Vtest)
-    whatIwant.append(data.mu)
-    whatIwant.append(data.sigma)
     whatIwant.append(data.tSeries)
+    whatIwant.append(data.geneLst)
+    if method=='pca':
+        whatIwant.append(data.mu)
+        whatIwant.append(data.sigma)
+    else:
+        whatIwant.append(np.zeros((len(data.geneLst),)))
+        whatIwant.append(np.ones((len(data.geneLst),)))
 
+    transMat = data.transition_matrix()
+    whatIwant.append(transMat)
     x = whatIwant
 
     retDict = {'optimalTheta':x[0], 'y':x[1], 'v':x[2],
                'optLam':x[3], 'errTrain':x[4], 'errCV':x[5],
                'learnCurveCV':x[6], 'learnCurveTrain':x[7],
                's':x[8], 'lambdas':x[9], 'u':x[10],
-               'Vcv':x[11], 'Vtest':x[12], 'mu':x[13],
-               'sigma':x[14], 'tSeries':x[15]}
+               'Vcv':x[11], 'Vtest':x[12], 'tSeries':x[13],
+               'genes':x[14], 'mu':x[15], 'sigma':x[16],
+               'transMat':x[17]}
 
 
     return retDict
 
+def sayHello():
+    print "Hello!"
 
-    ###!!!-------------------------------------------
-    # Return y and data.V instead of plotting inside
-    # the function.
-    ###!!!-------------------------------------------
+def showCumVar(s1,
+               s2,
+               labS1='Normalized Features',
+               labS2='Non-Normalized Features',
+               xLab='Mode',
+               yLab='Cumulative Variance',
+               title='Cumulative Variance of SVD modes',
+               locProp=(4,{'size':14})):
+
     """
-    for k in range(data.nModes):
-        pl.subplot(data.nModes,1,k+1)
-        pl.plot(y[k,:].T)
-        pl.axis(hold=True)
-        pl.plot(data.V[k,:].T)
+    Function: SHOWCUMVAR(s1,s2,labS1,labS2,xlab,ylab,title,locProp)
+
+    Description: Plot the Cumulative Variance of normalized and non-normalized
+    SVD modes.
+
+    Parameters: s1 -- first values of s matrix from an SVD decomposition
+                s2 -- second s vector from SVD decomposition
+                labS1 -- legend label for s1
+                labS2 -- legend label for s2
+                xLab -- label for x-axis on plot
+                yLab -- label for y-axis on plot
+                title -- title of plot
+                locProp -- (location,fontsize) tuple for legend() 
+
+    """
+
+    import pylab as pl
+    cumVar1norm = sum(s1**2)
+    cumVar2norm = sum(s2**2)
+    cumVar1, cumVar2 = [], []
+    for k in range(len(s1)):
+        cumVar1.append(sum(s1[:k]**2))
+        cumVar2.append(sum(s2[:k]**2))
+    cumVar1 /= cumVar1norm
+    cumVar2 /= cumVar2norm
+    pl.plot(cumVar1,label=labS1)
+    pl.axis(hold=True)
+    pl.plot(cumVar2,label=labS2)
+    pl.xlabel(xLab)
+    pl.ylabel(yLab)
+    pl.title(title)
+    pl.legend(loc=locProp[0],prop=locProp[1])
+
     pl.show()
 
-    pl.plot(y),pl.show()
-    pl.plot(y.T),pl.show()
+
+def showCVCurves(errTrains,
+                 errCVs,
+                 lams,
+                 cvLab='CV Error',
+                 trainLab='Training Error',
+                 xLab=r'Regularization $\lambda$',
+                 yLab='Error',
+                 titles=('Normalized Discrete',
+                         'Non-Normalized Discrete',
+                         'Normalized Continuous',
+                         'Non-Normalized Continuous'),
+                 supTitle=
+                 r'Cross Validation of Regularization Parameter $\lambda$',
+                 prop={'size':8}
+                 ):
+    """
+    Function: SHOWCVCURVES(cvTrains,
+                           cvErrs,
+                           lams,
+                           cvLab,
+                           trainLab,
+                           xLab,
+                           yLab,
+                           titles,
+                           supTitle)
+
+    Description: Plot the result of using the optimalTheta matrices to
+                 predict the macroscale dynamics.
+
+    Parameters: cvTrains -- list of Cross-Validation training errors
+                cvErrs -- list of errors on CV set
+                lams -- regularization lambdas
+                cvLab -- labels for cvErr
+                trainLab -- labels for cvTrain
+                xLab -- xlabel
+                yLab -- ylabel
+                titles -- list of titles for subplots
+                supTitle -- SuperTitle!
+
     """
 
-
-def primary():
-    ###!!!-------------------------------------------
-    # This is going to be where the results are 
-    # gathered and plotted. This will be fun.
-    ###!!!-------------------------------------------
-    
-    # All are commented out for the time being.
-    pcaDiscrete = cvLearningCurve(3,method='pca')
-    svdDiscrete = cvLearningCurve(4,method='svd')
-    pcaContinuous = dynamicCvLearningCurve(3,method='pca')
-    svdContinuous = dynamicCvLearningCurve(4,method='svd')
-    
-
-if __name__ == '__main__':
-    primary()
-
-
-
-"""
-def plot4(tspan, h, train, test, lam, fname=None):
-    """"""
-    PLOT4(tspan, h, train, test) -- tspan is the time domain, 
-                                 h is the model, 
-                                 y is the training data, 
-                                 test is the test set.
-
-    Description: Make a 2 X 2 subplot of the four modes. Make the
-    predictions one color (uniform for each 4 modes) and the data
-    another color. Make the test set a different color from the
-    training data. Label with individual correlations using a legend.
-    Calculate the correlations inside plot4.
-    """"""
-    nTest = test.shape[1]
-    rSquares = []
-    for k in range(4):
-        rSquares.append(np.corrcoef(h[k,-nTest:],test[k,:])[0,1])
-
-    intStrings = [ '1','2','3','4']
-    modelLabels = ['Dynamical Model '+x for x in intStrings]
-    dataLabels = ['Genome Mode '+x for x in intStrings]
-    testLabels = ['Model-Test Correlation= %.4f' % x for x in rSquares ]
-
-    rSquares = []
-    for k in range(4):
-        rSquares.append(np.corrcoef(h[k,-nTest:],test[k,:])[0,1])
-    
-    testPlot = np.zeros((test.shape[0],test.shape[1]+1))
-    testPlot[:,0] = train[:,-1]
-    testPlot[:,1:] = test
-    pl.figure()
-    pl.suptitle('Models and Data for Regularization Lambda = %.2f' % lam)
     for k in range(4):
         pl.subplot(2,2,k+1)
-        pl.plot(tspan[:-nTest],
-                train[k,:],
-                'g.-',
-                label=dataLabels[k],
-                markersize=6)
-        if k==0 or k==2:
-            pl.xlabel('time',fontsize=6)
-            pl.ylabel('expression', fontsize=6)
-        else:
-            pl.xlabel('time',fontsize=6)
-            pl.ylabel('')
-
+        pl.plot(lams,errTrains[k],label=trainLab)
         pl.axis(hold=True)
-        pl.plot(tspan[-nTest-1:],
-                testPlot[k,:],
-                'm.-',
-                label=testLabels[k],
-                markersize=6)
+        pl.plot(lams,errCVs[k],label=cvLab)
+        pl.xlabel(xLab)
+        pl.ylabel(yLab)
+        pl.title(titles[k])
+        pl.legend(prop=prop)
+    pl.suptitle(supTitle)
 
-        pl.plot(tspan, 
-                h[k,:],
-                'y^-',
-                label=modelLabels[k],
-                markersize=6)
+    pl.show()
+
+
+def showLearningCurves(errTrains,
+                       errCVs,
+                       lams,
+                       cvLab='CV Error',
+                       trainLab='Training Error',
+                       xLab='Number of Samples',
+                       yLab='Error',
+                       titles=('Normalized Discrete',
+                               'Non-Normalized Discrete',
+                               'Normalized Continuous',
+                               'Non-Normalized Continuous'),
+                       supTitle='Learning Curves',
+                       prop={'size':8}
+                       ):
+    """
+    Function: SHOWLEARNINGCURVES(errTrains,
+                                 errCVs,
+                                 lams,
+                                 cvLab,
+                                 trainLab,
+                                 xLab,
+                                 yLab,
+                                 titles,
+                                 supTitle)
+
+    Description: Plot the Learning Curves associated with the four
+                 methods.
+
+    Parameters: see __doc__ for SHOWLEARNINGCURVES()
+
+    """
+    import pylab as pl
+    for k in range(4):
+        pl.subplot(2,2,k+1)
+        pl.plot(lams[k],errTrains[k],label=trainLab)
+        pl.axis(hold=True)
+        pl.plot(lams[k],errCVs[k],label=cvLab)
+        pl.xlabel(xLab)
+        pl.ylabel(yLab)
+        pl.title(titles[k])
+        pl.legend(prop=prop)
+    pl.suptitle(supTitle)
+
+    pl.show()
+
+def prepResults(results):
+    """
+    Function: PREPRESULTS(results)
+
+    Description: Prepare results for plotting.
+
+    Parameters: results -- the results from gatherResults()
+
+    """
+    models = []
+    models.append(results[0]['y'][0,:])
+    models.append(results[1]['y'][1,:])
+    models.append(results[0]['y'][1,:])
+    models.append(results[1]['y'][2,:])
+    models.append(results[0]['y'][2,:])
+    models.append(results[1]['y'][3,:])
+    models.append(results[2]['y'][:,0])
+    models.append(results[3]['y'][:,1])
+    models.append(results[2]['y'][:,1])
+    models.append(results[3]['y'][:,2])
+    models.append(results[2]['y'][:,2])
+    models.append(results[3]['y'][:,3])
+
+    datas = []
+    datas.append(results[0]['Vtest'][0,:])
+    datas.append(results[1]['Vtest'][1,:])
+    datas.append(results[0]['Vtest'][1,:])
+    datas.append(results[1]['Vtest'][2,:])
+    datas.append(results[0]['Vtest'][2,:])
+    datas.append(results[1]['Vtest'][3,:])
+    datas.append(results[2]['Vtest'][0,:])
+    datas.append(results[3]['Vtest'][1,:])
+    datas.append(results[2]['Vtest'][1,:])
+    datas.append(results[3]['Vtest'][2,:])
+    datas.append(results[2]['Vtest'][2,:])
+    datas.append(results[3]['Vtest'][3,:])
+
+    
+    nTest = len(datas[-1])
+
+    labels= []
+    labels.append('Mode 1')
+    labels.append('Mode 1')
+    labels.append('Mode 2')
+    labels.append('Mode 2')
+    labels.append('Mode 3')
+    labels.append('Mode 3')
+
+    labels = 2*labels
+
+    t_begin, t_final = 13.833, 16.9671071428572
+    time = np.linspace(t_begin,t_final,48)
+
+    mu = results[0]['mu']
+    sigma = results[0]['sigma']
+
+    SIGMA = np.tile(sigma,(nTest,1)).T
+    MU = np.tile(mu,(nTest,1)).T
+
+
+    tSeries = results[0]['tSeries']
+    testSet = tSeries[:,-nTest:]
+    zsTest = np.multiply(testSet-MU,1./SIGMA)
+
+    pred1 = np.zeros(testSet.shape)
+    pred1[:,0] = zsTest[:,0]
+    for k in range(nTest-1):
+        pred1[:,k+1] = np.dot(results[0]['transMat'],pred1[:,k])
+
+    pred2 = np.zeros(testSet.shape)
+    pred2[:,0] = testSet[:,0]
+    for k in range(nTest-1):
+        pred2[:,k+1] = np.dot(results[1]['transMat'],pred2[:,k])
+
+    pred3 = np.zeros(testSet.shape)
+
+    for k in range(nTest):
+        for kk in range(3):
+            pred3[:,k] += results[2]['y'].T[kk,k]*results[2]['u'][:,kk]*results[2]['s'][kk]
+
+    pred4 = np.zeros(testSet.shape)
+
+    for k in range(nTest):
+        for kk in range(4):
+            pred4[:,k] += results[3]['y'].T[kk,k]*results[3]['u'][:,kk]*results[3]['s'][kk]
+
+
+    preds = [np.multiply(SIGMA,pred1)+MU,
+             pred2,
+             np.multiply(SIGMA,pred3)+MU,
+             pred4]
+
+    zPreds = [pred1,
+              np.multiply(pred2-MU,1./SIGMA),
+              pred3,
+              np.multiply(pred4-MU,1./SIGMA)]
+
+
+    return [models, datas, labels, time, preds, zPreds]
+
+def filterAssociations(results):
+    """
+    Function: FILTERASSOCIATIONS(results)
+
+    Description: filters out junk from transition matrices so we can
+                 examine the correlation between physical genome-wide
+                 associations and collective behavior between modules
+                 of genes.
+
+    Parameters: results -- results from gatherResults()
+
+    """
+
+    normTrans = results[5]
+    nonNormTrans = results[7]
+    landscape = results[6]
+    LAND = np.abs(1./landscape) < 0.01
+    NORMED = np.abs(normTrans) > 0.0005
+    NONNORMED =np.abs(nonNormTrans) > 0.001
+
+    return [LAND, NORMED, NONNORMED]
+
+def showTestDynamics(models,
+                     datas,
+                     labels,
+                     time,
+                     xLab='Time',
+                     yLab='Expression',
+                     locProp=(2,{'size':7}),
+                     titles=('Normalized Discrete',
+                             'Non-Normalized Discrete',
+                             'Normalized Continuous',
+                             'Non-Normalized Continuous'),
+                     supTitle='Macroscale Data and Dynamic Models'):
+
+    """
+    Function: SHOWTESTDYNAMICS(models,
+                               datas,
+                               labels,
+                               time,
+                               xLab,
+                               yLab,
+                               locProp,
+                               titles,
+                               supTitle)
+
+    Description: Plots the dynamics of the test IVP using either a
+                 machine learning/regression approach or an approach 
+                 that fits an optimal LDS as an IVP.
+
+    Parameters: models -- list of models to plot
+                datas -- list of data to plot
+                labels -- labels for the data                  
+                time -- times of measurement
+                xLab -- xlabel
+                yLab -- ylabel
+                locProp -- the location and prop for legend()
+                titles -- titles of subplots
+                supTitle -- SuperiorTitle!
+
+    """
+    import pylab as pl
+    import numpy as np
+
+    for k in range(12):
+        pl.subplot(6,2,k+1)
+        pl.plot(time,datas[k],label=labels[k])
+        pl.axis(hold=True)
+        corr = np.corrcoef(models[k],datas[k])[0,1]
+        pl.plot(time,models[k],label='Correlation '+str(corr)[:6])
+        pl.legend(loc=locProp[0],prop=locProp[1])
+        if k == 10 or k == 11:
+            pl.xlabel(xLab)
+        else:
+            pl.xticks([])
         if k == 0:
-            location = 3
-        else:
-            location = 2
-        pl.legend(loc=location ,prop={'size':6})
-        if fname == None:
-            pl.show()
-        else:
-            pl.savefig(fname)
-    pl.clf()
+            pl.title(titles[0])
+        elif k == 1:
+            pl.title(titles[1])
+        elif k == 6:
+            pl.title(titles[2])
+        elif k == 7:
+            pl.title(titles[3])
+        pl.ylabel(yLab)
+    pl.suptitle(supTitle)
+    pl.show()
 
-"""
+def showMicroSurface(preds,
+                     zPreds,
+                     tSeries,
+                     time,
+                     yLab='Gene',
+                     xLab='Time',
+                     zLab='Expression',
+                     titles=('Normalized Discrete',
+                             'Non-Normalized Discrete',
+                             'Normalized Continuous',
+                             'Non-Normalized Continuous'),
+                     supTitle='Predictions of Microscale Dynamics'
+                     ):
+    """
+    """
+
+    from mpl_toolkits.mplot3d import Axes3D
+
+    nGenes, nTest = preds[0].shape
+    y = range(nGenes)
+    T, Y = np.meshgrid(time,y)
+    testSet = tSeries[:,-nTest:]
+    corrs = []
+    for k in range(4):
+        corrs.append(str(np.corrcoef(preds[k].ravel(),
+                                     testSet.ravel())[0,1])[:5])
+    fig = pl.figure()
+    for k in range(4):
+        ax = fig.add_subplot(2,2,k+1,projection='3d')
+        surf = ax.plot_surface(T,Y,zPreds[k],cmap=pl.cm.coolwarm)
+        ax.set_yticks([])
+        ax.set_ylabel(yLab)
+        ax.set_xlabel(xLab)
+        ax.set_zlabel(zLab)
+        ax.view_init(elev=45., azim=315.)
+        pl.title(titles[k])
+        fig.colorbar(surf,shrink=0.5,aspect=10)
+        txt = ax.text(16.7,4000,zPreds[k].max()+1,r'$R^2$='+corrs[k])
+    pl.suptitle(supTitle)
+    pl.show()
+
+def spyLandTrans(land,norm,nonNorm):
+    pl.subplot(3,1,1)
+    pl.spy(land,marker='.',markersize=0.1,color='b')
+    pl.ylabel('Assayed Genes',{'fontsize':12})
+    pl.yticks([])
+    pl.xticks([])
+    pl.title('Genetic Landscape')
+    pl.subplot(3,1,2)
+    pl.spy(norm,marker='.',markersize=0.1,color='g')
+    pl.yticks([])
+    pl.xticks([])
+    pl.ylabel('Assayed Genes',{'fontsize':12})
+    pl.title('Transition Matrix - Normalized Features')
+    pl.subplot(3,1,3)
+    pl.spy(nonNorm,marker='.',markersize=0.1,color='m')
+    pl.ylabel('Assayed Genes',{'fontsize':12})
+    pl.xlabel('Screened Genes',{'fontsize':12})
+    pl.xticks([])
+    pl.yticks([])
+    pl.title('Transition Matrix - Non-Normalized Features')
+    pl.suptitle('Comparison of Transition Matrices to Genetic Landscape')
+
+    pl.show()
+
+
+def gatherResults():
+    """
+    Function: GATHERRESULTS()
+    """
+    pd = cvLearningCurve(3,method='pca')
+    sd = cvLearningCurve(4,method='svd')
+    pc = dynamicCvLearningCurve(3,method='pca')
+    sc = dynamicCvLearningCurve(4,method='svd')
+    pd_gene, pd_mod = booneValidation(pd['genes'],pd['transMat'])
+    sd_gene, sd_mod = booneValidation(sd['genes'],sd['transMat'])
+    
+    return [pd, sd, pc, sc, pd_gene, pd_mod, sd_gene, sd_mod]
+
+if __name__ == '__main__':
+    results = gatherResults()

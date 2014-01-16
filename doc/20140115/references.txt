@@ -1,0 +1,43 @@
+#-----------------------------------------------------------------------------#
+1.
+D'haeseleer, P, X Wen, S Fuhrman, and R Somogyi. "Linear Modeling of Mrna Expression Levels During Cns Development and Injury." Pacific Symposium on Biocomputing. Pacific Symposium on Biocomputing. (1999): 41-52. Print. 
+
+#-----------------------------------------------------------------------------#
+2.
+Wu, FX, WJ Zhang, and AJ Kusalik. "Modeling Gene Expression from Microarray Expression Data with State-Space Equations." Pacific Symposium on Biocomputing. Pacific Symposium on Biocomputing. (2004): 581-92. Print. 
+
+#-----------------------------------------------------------------------------#
+3.
+Alter, O, P O. Brown, and D Botstein. "Singular Value Decomposition for Genome-Wide Expression Data Processing and Modeling." Proceedings of the National Academy of Sciences. 97.18 (2000): 10101-10106. Print. 
+
+#-----------------------------------------------------------------------------#
+4.
+Li, Caroline M, and Robert R. Klevecz. "A Rapid Genome-Scale Response of the Transcriptional Oscillator to Perturbation Reveals a Period-Doubling Path to Phenotypic Change." Proceedings of the National Academy of Sciences of the United States of America. 103.44 (2006): 16254-16259. Print. 
+
+#-----------------------------------------------------------------------------#
+5.
+Kutz, Jose N. Data-driven Modeling & Scientific Computation: Methods for Complex Systems & Big Data. , 2013. 
+
+#-----------------------------------------------------------------------------#
+6.
+Alon, Uri. An Introduction to Systems Biology: Design Principles of Biological Circuits. Boca Raton, FL: Chapman & Hall/CRC, 2007.
+
+#-----------------------------------------------------------------------------#
+7.
+Bar-Joseph, Z. "Analyzing Time Series Gene Expression Data." Bioinformatics (oxford, England). 20.16 (2004): 2493-503. 
+
+#-----------------------------------------------------------------------------#
+8.
+Shlizerman, E, K Schroder, and J.N Kutz. "Neural Activity Measures and Their Dynamics." Siam Journal on Applied Mathematics. 72.4 (2012): 1260-1291.
+
+#-----------------------------------------------------------------------------#
+9.
+Eckart, Carl, and Gale Young. "The Approximation of One Matrix by Another of Lower Rank." Psychometrika. 1.3 (1936): 211-218.
+
+#-----------------------------------------------------------------------------#
+10.
+Chen, T., He, H. L., and Church, G. M. “Modeling Gene Expression with
+Differential Equations” Pacific Symposium on Biocomputing 4: 29-40, (1999)
+
+
+
