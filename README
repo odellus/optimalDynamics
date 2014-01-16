@@ -1,1 +1,3 @@
 Fit dynamical models to data.
+
+To run, just type "python optimalDynamics.py".

@@ -909,7 +909,8 @@ def showCumVar(s1,
                xLab='Mode',
                yLab='Cumulative Variance',
                title='Cumulative Variance of SVD modes',
-               locProp=(4,{'size':14})):
+               locProp=(4,{'size':14}),
+               figParams=(8,6,80)):
 
     """
     Function: SHOWCUMVAR(s1,s2,labS1,labS2,xlab,ylab,title,locProp)
@@ -932,6 +933,7 @@ def showCumVar(s1,
     cumVar1norm = sum(s1**2)
     cumVar2norm = sum(s2**2)
     cumVar1, cumVar2 = [], []
+    pl.figure(figsize=(figParams[0],figParams[1]),dpi=figParams[2])
     for k in range(len(s1)):
         cumVar1.append(sum(s1[:k]**2))
         cumVar2.append(sum(s2[:k]**2))
@@ -944,9 +946,10 @@ def showCumVar(s1,
     pl.ylabel(yLab)
     pl.title(title)
     pl.legend(loc=locProp[0],prop=locProp[1])
-
-    pl.show()
-
+    pl.savefig('doc/cumulativeVariance.png')
+    #pl.show()
+    pl.clf()
+    return [cumVar1, cumVar2]
 
 def showCVCurves(errTrains,
                  errCVs,
@@ -961,7 +964,8 @@ def showCVCurves(errTrains,
                          'Non-Normalized Continuous'),
                  supTitle=
                  r'Cross Validation of Regularization Parameter $\lambda$',
-                 prop={'size':8}
+                 prop={'size':8},
+                 figParams=(16,9,80)
                  ):
     """
     Function: SHOWCVCURVES(cvTrains,
@@ -988,7 +992,8 @@ def showCVCurves(errTrains,
                 supTitle -- SuperTitle!
 
     """
-
+    pl.figure(figsize=(figParams[0],figParams[1]),dpi=figParams[2])
+    
     for k in range(4):
         pl.subplot(2,2,k+1)
         pl.plot(lams,errTrains[k],label=trainLab)
@@ -998,10 +1003,12 @@ def showCVCurves(errTrains,
         pl.ylabel(yLab)
         pl.title(titles[k])
         pl.legend(prop=prop)
-    pl.suptitle(supTitle)
-
-    pl.show()
-
+    pl.suptitle(supTitle,fontsize=16)
+    pl.tight_layout()
+    pl.subplots_adjust(top=0.85)
+    pl.savefig('doc/crossValidationCurves.png')
+    #pl.show()
+    pl.clf()
 
 def showLearningCurves(errTrains,
                        errCVs,
@@ -1015,7 +1022,8 @@ def showLearningCurves(errTrains,
                                'Normalized Continuous',
                                'Non-Normalized Continuous'),
                        supTitle='Learning Curves',
-                       prop={'size':8}
+                       prop={'size':8},
+                       figParams=(16,9,80)
                        ):
     """
     Function: SHOWLEARNINGCURVES(errTrains,
@@ -1031,10 +1039,12 @@ def showLearningCurves(errTrains,
     Description: Plot the Learning Curves associated with the four
                  methods.
 
-    Parameters: see __doc__ for SHOWLEARNINGCURVES()
+    Parameters: see __doc__ for SHOWCVCURVES()
 
     """
     import pylab as pl
+
+    pl.figure(figsize=(figParams[0],figParams[1]),dpi=figParams[2])
     for k in range(4):
         pl.subplot(2,2,k+1)
         pl.plot(lams[k],errTrains[k],label=trainLab)
@@ -1044,9 +1054,12 @@ def showLearningCurves(errTrains,
         pl.ylabel(yLab)
         pl.title(titles[k])
         pl.legend(prop=prop)
-    pl.suptitle(supTitle)
-
-    pl.show()
+    pl.suptitle(supTitle,fontsize=16)
+    pl.tight_layout()
+    pl.subplots_adjust(top=0.85)
+    pl.savefig('doc/learningCurves.png')
+    #pl.show()
+    pl.clf()
 
 def prepResults(results):
     """
@@ -1146,7 +1159,7 @@ def prepResults(results):
               np.multiply(pred4-MU,1./SIGMA)]
 
 
-    return [models, datas, labels, time, preds, zPreds]
+    return [models, datas, labels, time, preds, zPreds, MU, SIGMA]
 
 def filterAssociations(results):
     """
@@ -1176,12 +1189,14 @@ def showTestDynamics(models,
                      time,
                      xLab='Time',
                      yLab='Expression',
-                     locProp=(2,{'size':7}),
+                     locProp=(2,{'size':9}),
                      titles=('Normalized Discrete',
                              'Non-Normalized Discrete',
                              'Normalized Continuous',
                              'Non-Normalized Continuous'),
-                     supTitle='Macroscale Data and Dynamic Models'):
+                     supTitle='Macroscale Data and Dynamic Models',
+                     figParams=(12,9,80)
+                     ):
 
     """
     Function: SHOWTESTDYNAMICS(models,
@@ -1212,6 +1227,7 @@ def showTestDynamics(models,
     import pylab as pl
     import numpy as np
 
+    pl.figure(figsize=(figParams[0],figParams[1]),dpi=figParams[2])
     for k in range(12):
         pl.subplot(6,2,k+1)
         pl.plot(time,datas[k],label=labels[k])
@@ -1232,8 +1248,12 @@ def showTestDynamics(models,
         elif k == 7:
             pl.title(titles[3])
         pl.ylabel(yLab)
-    pl.suptitle(supTitle)
-    pl.show()
+    pl.suptitle(supTitle,fontsize=16)
+    pl.tight_layout()
+    pl.subplots_adjust(top=0.85)
+    pl.savefig('doc/macroscaleDynamics.png')
+    #pl.show()
+    pl.clf()
 
 def showMicroSurface(preds,
                      zPreds,
@@ -1246,7 +1266,8 @@ def showMicroSurface(preds,
                              'Non-Normalized Discrete',
                              'Normalized Continuous',
                              'Non-Normalized Continuous'),
-                     supTitle='Predictions of Microscale Dynamics'
+                     supTitle='Predictions of Microscale Dynamics',
+                     figParams=(12,9,80)
                      ):
     """
     """
@@ -1261,7 +1282,7 @@ def showMicroSurface(preds,
     for k in range(4):
         corrs.append(str(np.corrcoef(preds[k].ravel(),
                                      testSet.ravel())[0,1])[:5])
-    fig = pl.figure()
+    fig = pl.figure(figsize=(figParams[0],figParams[1]),dpi=figParams[2])
     for k in range(4):
         ax = fig.add_subplot(2,2,k+1,projection='3d')
         surf = ax.plot_surface(T,Y,zPreds[k],cmap=pl.cm.coolwarm)
@@ -1270,13 +1291,54 @@ def showMicroSurface(preds,
         ax.set_xlabel(xLab)
         ax.set_zlabel(zLab)
         ax.view_init(elev=45., azim=315.)
+        ax.tick_params(axis='both',which='major',labelsize=8)
+        ax.tick_params(axis='both',which='minor',labelsize=8)
         pl.title(titles[k])
         fig.colorbar(surf,shrink=0.5,aspect=10)
         txt = ax.text(16.7,4000,zPreds[k].max()+1,r'$R^2$='+corrs[k])
-    pl.suptitle(supTitle)
-    pl.show()
+    pl.suptitle(supTitle,fontsize=16)
+    #pl.tight_layout()
+    #pl.subplots_adjust(top=0.85)
+    pl.savefig('doc/microscaleDynamics.png')
+    #pl.show()
+    pl.clf()
 
-def spyLandTrans(land,norm,nonNorm):
+def showTestSurface(zsTest,
+                    time,
+                    yLab='Gene',
+                    xLab='Time',
+                    zLab='Expression',
+                    supTitle='Microscale Data',
+                    figParams=(8,6,80)
+                    ):
+    """
+    """
+
+    from mpl_toolkits.mplot3d import Axes3D
+
+    nGenes, nTest = zsTest.shape
+    y = range(nGenes)
+    T, Y = np.meshgrid(time,y)
+    fig = pl.figure(figsize=(figParams[0],figParams[1]),dpi=figParams[2])
+    ax = fig.add_subplot(1,1,1,projection='3d')
+    surf = ax.plot_surface(T,Y,zsTest,cmap=pl.cm.coolwarm)
+    ax.set_yticks([])
+    ax.set_ylabel(yLab)
+    ax.set_xlabel(xLab)
+    ax.set_zlabel(zLab)
+    ax.view_init(elev=45., azim=315.)
+    ax.tick_params(axis='both',which='major',labelsize=8)
+    ax.tick_params(axis='both',which='minor',labelsize=8)
+    fig.colorbar(surf,shrink=0.5,aspect=10)
+    pl.suptitle(supTitle,fontsize=16)
+    pl.savefig('doc/microscaleTestSet.png')
+    pl.clf()
+
+
+
+
+def spyLandTrans(land,norm,nonNorm,figParams=(8,6,80)):
+    pl.figure(figsize=(figParams[0],figParams[1]),dpi=figParams[2])
     pl.subplot(3,1,1)
     pl.spy(land,marker='.',markersize=0.1,color='b')
     pl.ylabel('Assayed Genes',{'fontsize':12})
@@ -1288,18 +1350,21 @@ def spyLandTrans(land,norm,nonNorm):
     pl.yticks([])
     pl.xticks([])
     pl.ylabel('Assayed Genes',{'fontsize':12})
-    pl.title('Transition Matrix - Normalized Features')
+    pl.title('Transition Matrix : Normalized Features')
     pl.subplot(3,1,3)
     pl.spy(nonNorm,marker='.',markersize=0.1,color='m')
     pl.ylabel('Assayed Genes',{'fontsize':12})
     pl.xlabel('Screened Genes',{'fontsize':12})
     pl.xticks([])
     pl.yticks([])
-    pl.title('Transition Matrix - Non-Normalized Features')
-    pl.suptitle('Comparison of Transition Matrices to Genetic Landscape')
-
-    pl.show()
-
+    pl.title('Transition Matrix : Non-Normalized Features')
+    pl.suptitle('Comparison of Transition Matrices to Genetic Landscape',
+                fontsize=16)
+    pl.tight_layout()
+    pl.subplots_adjust(top=0.85)
+    pl.savefig('doc/comparisonAdjacency.png')
+    #pl.show()
+    pl.clf()
 
 def gatherResults():
     """
@@ -1314,5 +1379,65 @@ def gatherResults():
     
     return [pd, sd, pc, sc, pd_gene, pd_mod, sd_gene, sd_mod]
 
+def showMe(results):
+    import subprocess, os
+
+    showCumVar(results[0]['s'],results[1]['s'])
+
+    lamsCV = results[0]['lambdas']
+    errTrains, errCVs = [], []
+    for k in range(4):
+        errTrains.append(results[k]['errTrain'])
+        tmp = []
+        for x in results[k]['errCV']:
+            tmp.append(x[0])
+        errCVs.append(tmp)
+    for k in range(len(lamsCV)):
+        if errCVs[3][k] > 0.15:
+            errCVs[3][k] = 0.15
+
+
+    showCVCurves(errTrains,errCVs,lamsCV)
+
+    lcTrains, lcCVs = [], []
+    for k in range(4):
+        lcTrains.append(results[k]['learnCurveTrain'])
+        lcCVs.append(results[k]['learnCurveCV'])
+
+    # Filter out values above 0.15
+    for k in range(len(lcCVs[3])):
+        if lcCVs[3][k] > 0.15:
+            lcCVs[3][k] = 0.15
+
+    nSamples = []
+    for k in range(4):
+        nSamples.append(range(1,len(lcCVs[k])+1))
+
+    showLearningCurves(lcTrains,lcCVs,nSamples)
+    x = prepResults(results)
+    models, datas, labels, time, preds, zPreds, MU, SIGMA = x
+    nTest = len(models[0])
+    testTime = time[-nTest:]
+    showTestDynamics(models,datas,labels,testTime)
+
+    tSeries = results[0]['tSeries']
+    zsTest = np.multiply(tSeries[:,-nTest:]-MU,1./SIGMA)
+    showTestSurface(zsTest,testTime)
+    showMicroSurface(preds,zPreds,tSeries,testTime)
+    
+
+    a,b,c = filterAssociations(results)
+    spyLandTrans(a,b,c)
+
+    os.chdir('doc')
+    p = subprocess.Popen('pdflatex project_notes.tex',shell=True)
+    p.communicate()
+
+    p = subprocess.Popen('evince project_notes.pdf',shell=True)
+    p.communicate()
+    os.chdir('..')
+
+
 if __name__ == '__main__':
     results = gatherResults()
+    showMe(results)
