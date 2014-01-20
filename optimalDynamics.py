@@ -4,11 +4,10 @@ import numpy as np
 import pylab as pl
 
 from scipy import optimize as opt
-np.random.seed(seed=5629387459236459872)
+np.random.seed(seed=56293859236459872)
 
 def load_yeast2_data( fname ):
     """
-
     Function:  LOAD_YEAST2_DATA( fname )
 
     Description: load the data in from the GSE series matrix and parse
@@ -57,7 +56,6 @@ def load_yeast2_data( fname ):
 
 class dataDynamics:
     """
-
     Class dataDynamics -- Find optimal linear models for reduced order
     systems of time series data.
 
@@ -68,7 +66,6 @@ class dataDynamics:
                  nTest, 
                  nPrune=0):
         """
-
         Method:  __INIT__(self, fname, nCV, nTest, nPrune=0) 
 
         Description: Initialize values for the class dataDynamics.  
@@ -105,7 +102,6 @@ class dataDynamics:
 
     def featureNormalize(self):
         """
-
         Method:  FEATURENORMALIZE(self)
 
         Description: Normalizes the features of class dataDynamics,
@@ -144,7 +140,6 @@ class dataDynamics:
 
     def PCA(self):
         """
-
         Method: PCA(self)
         
         Description:  performs principal component analysis of the 
@@ -187,7 +182,6 @@ class dataDynamics:
     def randInitTheta(self,
                       init_epsilon):
         """
-
         Method:  RANDINITTHETA(self, init_epsilon)
         
         Description: create a vector of random numbers contained 
@@ -208,7 +202,6 @@ class dataDynamics:
                         y, 
                         lam):
         """
-
         Method: REGCOSTFUNCTION(self, theta, X, y, lam)
 
         Description: objective function to be minimized to find
@@ -229,7 +222,7 @@ class dataDynamics:
         else:
             biasStart = 1
         return (np.sum((np.dot(Theta,X) - y)**2 )\
-                          + lam*np.linalg.norm(Theta[:,biasStart:],ord=1)**2) \
+                          + lam*np.linalg.norm(Theta[:,biasStart:],ord=1)) \
                           /(2*len(X.ravel()))
 
     def projection(self,
@@ -342,7 +335,8 @@ class dataDynamics:
             #print init_theta.shape
             w = opt.fmin_cg(self.regCostFunction, 
                             init_theta, 
-                            args = (self.Vx, self.Vy, self.lam) )
+                            args = (self.Vx, self.Vy, self.lam),
+                            disp=0)
             optimal_costs.append(
                 (self.regCostFunction(w,self.Vx,self.Vy,self.lam),w)
                 )
@@ -402,11 +396,14 @@ class dataDynamics:
                      tspan -- a vector of times to solve the system
         """
         nTime, nDegree = len(tspan), len(x0)
-        lam, eta = np.linalg.eig(A)
-        c = np.dot(np.linalg.inv(eta), x0)
-        mat_lst = [np.multiply(np.exp(lam*t), eta) for t in tspan]
-        y = np.dot(mat_lst,c)
-        return y
+        if np.any(np.isnan(A.ravel())) or np.any(np.isinf(A.ravel())):
+            return np.zeros((nTime,nDegree))
+        else:
+            lam, eta = np.linalg.eig(A)
+            c = np.dot(np.linalg.inv(eta), x0)
+            mat_lst = [np.multiply(np.exp(lam*t), eta) for t in tspan]
+            y = np.dot(mat_lst,c)
+            return y
 
 
     def linSysCostFunction(self, 
@@ -431,9 +428,12 @@ class dataDynamics:
         mRange=range(train.shape[1])
         A = Theta.reshape((train.shape[0],train.shape[0]))
         y=self.linSys(x0,A,mRange)
-        return (np.linalg.norm((y-train.T)**2) + 
-                              lam*np.linalg.norm(Theta,ord=1)) \
-                              /float(len(mRange))
+        if y == np.zeros((train.shape[1],x0.shape[0])):
+            return 10e5
+        else:
+            return (np.linalg.norm((y-train.T)**2) + 
+                    lam*np.linalg.norm(Theta,ord=1)) \
+                    /float(len(mRange))
 
     def dynamic_fit_reduced(self, 
                             nModes, 
@@ -485,7 +485,8 @@ class dataDynamics:
             init_theta = self.randInitTheta(initEpsilon)
             w = opt.fmin_cg(self.linSysCostFunction, 
                             init_theta, 
-                            args = (self.Vtrain[:,:nSamples],lam) )
+                            args = (self.Vtrain[:,:nSamples],lam),
+                            disp=0)
             optimal_costs.append(
                 (self.linSysCostFunction(w,self.Vtrain[:,:nSamples],lam),w)
                 )
@@ -639,7 +640,7 @@ def char_fp(mat):
     return state
 
 
-def cvLearningCurve(nModes,method='pca'):
+def cvLearningCurve(nModes,nTries,method='pca'):
     """
 
     Function: CVLEARNINGCURVE() 
@@ -677,11 +678,12 @@ def cvLearningCurve(nModes,method='pca'):
     # A good bit of coupling between the modes works well.
     initEpsilon = 0.2
     # Do multivariate linear regression with l1 regularization
-    lams = np.linspace(0.,1.0,20)
+    lams = np.linspace(0.,1.,20) 
+    # np.concatenate((np.zeros(1,),3**np.linspace(-5.,5.,11)))
     errCV = []
     errTrain = []
     for lam in lams:
-        data.fit_reduced(nModes,1, lam, initEpsilon,method=method)
+        data.fit_reduced(nModes,nTries, lam, initEpsilon,method=method)
         cvErr = data.regCostFunction(
             data.optimalTheta, 
             data.Vxcv, 
@@ -720,12 +722,12 @@ def cvLearningCurve(nModes,method='pca'):
     whatIwant.append(optLam)
     whatIwant.append(errTrain)
     whatIwant.append(errCV)
-    print "The Optimal Lambda was "+str(optLam)+"."
+    #print "The Optimal Lambda was "+str(optLam)+"."
     learnCurveCV = []
     learnCurveTrain = []
     mRange = range(data.X.shape[1]-(1+data.nPrune))
     for k in mRange:
-        data.fit_reduced(nModes,1, optLam,initEpsilon, nSamples=k+2,method=method)
+        data.fit_reduced(nModes,nTries, optLam,initEpsilon, nSamples=k+2,method=method)
         trainErr = data.regCostFunction(
                 data.optimalTheta,
                 data.Vx,
@@ -743,6 +745,7 @@ def cvLearningCurve(nModes,method='pca'):
     whatIwant.append(data.S)
     whatIwant.append(lams)
 
+    data.transition_matrix()
     transMat = data.transitionMatrix
     whatIwant.append(transMat)
     whatIwant.append(data.U)
@@ -774,7 +777,7 @@ def cvLearningCurve(nModes,method='pca'):
     
     return retDict
 
-def dynamicCvLearningCurve(nModes,method='pca'):
+def dynamicCvLearningCurve(nModes,nTries,method='pca'):
     """
     Function: DYNAMICCVLEARNINGCURVE(nModes,method='pca')
     
@@ -803,8 +806,9 @@ def dynamicCvLearningCurve(nModes,method='pca'):
 
     whatIwant = []
     initEpsilon = 0.2
-    lams = np.linspace(0.,1.0,20)
-    data.dynamic_fit_reduced(nModes,1, 0.0, initEpsilon,method=method)
+    lams = np.linspace(0.,1.,20)
+    #np.concatenate((np.zeros(1,),3**np.linspace(-5.,5.,11)))
+    data.dynamic_fit_reduced(nModes,nTries, 0.0, initEpsilon,method=method)
     Vcv = np.zeros((data.Vxcv.shape[0],nCV+1))
     Vcv[:,:-1] = data.Vxcv
     Vcv[:,-1] = data.Vycv[:,-1]
@@ -812,7 +816,7 @@ def dynamicCvLearningCurve(nModes,method='pca'):
     errCV = []
     errTrain = []
     for lam in lams:
-        data.dynamic_fit_reduced(nModes,1, lam, initEpsilon,method=method)
+        data.dynamic_fit_reduced(nModes,nTries, lam, initEpsilon,method=method)
         cvErr = data.linSysCostFunction(
             data.optimalTheta,
             Vcv,
@@ -824,9 +828,8 @@ def dynamicCvLearningCurve(nModes,method='pca'):
         errCV.append((cvErr,lam,data.optimalTheta))
         errTrain.append(trainErr)
 
-
     optLam = sorted(errCV)[0][1]
-    print "The Optimal Lambda was "+str(optLam)+"."
+    #print "The Optimal Lambda was "+str(optLam)+"."
 
     theta = sorted(errCV)[0][2]
     train = data.Vtrain
@@ -1370,10 +1373,11 @@ def gatherResults():
     """
     Function: GATHERRESULTS()
     """
-    pd = cvLearningCurve(3,method='pca')
-    sd = cvLearningCurve(4,method='svd')
-    pc = dynamicCvLearningCurve(3,method='pca')
-    sc = dynamicCvLearningCurve(4,method='svd')
+    nModes4pca, nModes4svd,nTriesDisc, nTriesCont = 3, 4, 1, 1
+    pd = cvLearningCurve(nModes4pca,nTriesDisc,method='pca')
+    sd = cvLearningCurve(nModes4svd,nTriesDisc,method='svd')
+    pc = dynamicCvLearningCurve(nModes4pca,nTriesCont,method='pca')
+    sc = dynamicCvLearningCurve(nModes4svd,nTriesCont,method='svd')
     pd_gene, pd_mod = booneValidation(pd['genes'],pd['transMat'])
     sd_gene, sd_mod = booneValidation(sd['genes'],sd['transMat'])
     
@@ -1392,9 +1396,15 @@ def showMe(results):
         for x in results[k]['errCV']:
             tmp.append(x[0])
         errCVs.append(tmp)
-    for k in range(len(lamsCV)):
+
+    # Filter out values above 0.15.
+    for k in range(len(errCVs[3])):
         if errCVs[3][k] > 0.15:
             errCVs[3][k] = 0.15
+        if errCVs[2][k] > 0.15:
+            errCVs[2][k] = 0.15
+        if errTrains[2][k] > 0.15:
+            errTrains[2][k] = 0.15
 
 
     showCVCurves(errTrains,errCVs,lamsCV)
@@ -1408,6 +1418,10 @@ def showMe(results):
     for k in range(len(lcCVs[3])):
         if lcCVs[3][k] > 0.15:
             lcCVs[3][k] = 0.15
+
+    for k in range(len(lcCVs[2])):
+        if lcCVs[2][k] > 0.15:
+            lcCVs[2][k] = 0.15
 
     nSamples = []
     for k in range(4):
