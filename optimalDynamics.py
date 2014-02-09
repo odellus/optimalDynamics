@@ -100,6 +100,9 @@ class dataDynamics:
         self.pcaFlag = False
         self.svdFlag = False
 
+    def lstsqt(self):
+        self.lstsqtTheta = np.linalg.lstsqt(self.X,self.y)
+
     def featureNormalize(self):
         """
         Method:  FEATURENORMALIZE(self)
@@ -221,9 +224,8 @@ class dataDynamics:
             biasStart = 0
         else:
             biasStart = 1
-        return (np.sum((np.dot(Theta,X) - y)**2 )\
-                          + lam*np.linalg.norm(Theta[:,biasStart:],ord=1)) \
-                          /(2*len(X.ravel()))
+        return (np.sum((np.dot(Theta,X) - y)**2 )/(2*len(X.ravel())) \
+                          + lam*np.linalg.norm(Theta[:,biasStart:],ord=1)
 
     def projection(self,
                    method='pca'):
@@ -431,9 +433,8 @@ class dataDynamics:
         if y == np.zeros((train.shape[1],x0.shape[0])):
             return 10e5
         else:
-            return (np.linalg.norm((y-train.T)**2) + 
-                    lam*np.linalg.norm(Theta,ord=1)) \
-                    /float(len(mRange))
+            return (np.linalg.norm((y-train.T)**2)/float(len(mRange)) + \
+                    lam*np.linalg.norm(Theta,ord=1)
 
     def dynamic_fit_reduced(self, 
                             nModes, 
@@ -508,11 +509,24 @@ def booneValidation(genes, trans_mat, saver=None):
                 trans_mat -- a transition matrix which predicts dynamics.
 
     """
-    # read in the Boone lab's data
-    fh = open('data/test/sgadata_costanzo2009_rawdata_matrix_101120.txt','r')
-    data = fh.read().split('\n')[:-1]
-    fh.close()
+    import os, subprocess
+    if os.path.exists(
+        'data/test/sgadata_costanzo2009_rawdata_matrix_101120.txt'
+        ):
+        # read in the Boone lab's data
+        fh = open('data/test/sgadata_costanzo2009_rawdata_matrix_101120.txt',
+                  'r')
+        data = fh.read().split('\n')[:-1]
+        fh.close()
+    else:
+        os.chdir('data/test/')
+        wget_com = 'wget "https://www.dropbox.com/s/vtkxr0xplxcu9sw/sgadata_costanzo2009_rawdata_matrix_101120.txt"'
 
+        fh = open('data/test/sgadata_costanzo2009_rawdata_matrix_101120.txt',
+                  'r')
+        data = fh.read().split('\n')[:-1]
+        fh.close()
+        os.chdir('../..')
     # turn the list into a list of lists.
     interactions = []
     for x in data:
